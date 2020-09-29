@@ -1,5 +1,6 @@
 import pymysql
 import pass_key
+import os
 
 host = pass_key.host
 root = pass_key.root
@@ -9,6 +10,11 @@ def reset(user_id):
     con = pymysql.connect(host, root, pasw, 'restarans')
     try:
         with con.cursor() as cursor:
+            cursor.execute("SELECT pic FROM tb_users WHERE user_chat = (%s)", (user_id))
+            result = cursor.fetchall() # возвращает typle c одним элементом
+            for i in result:
+                os.remove(i[0])
+
             cursor.execute("DELETE FROM restarans.tb_users WHERE user_chat = (%s)", (user_id))
             con.commit()
     finally:

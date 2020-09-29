@@ -11,24 +11,32 @@ add, name, picture, res_location, confirmation = range(5)
 
 user_state = def_dict(lambda: add)
 
-def get_state(message): # узнает состояние
+
+def get_state(message):  # узнает состояние
     return user_state[message.chat.id]
-def update_state(message, state): # обновляет состояние
+
+
+def update_state(message, state):  # обновляет состояние
     user_state[message.chat.id] = state
 
-restarans = def_dict(lambda: {}) # словарь для ресторанов
+
+restarans = def_dict(lambda: {})  # словарь для ресторанов
+
 
 def update_restarans(user_id, key, value):
     restarans[user_id][key] = value
+
+
 def get_resarans(user_id):
     return restarans[user_id]
 
 
 bot = telebot.TeleBot(Token, parse_mode=None)  # You can set parse_mode by default. HTML or MARKDOWN
 
+
+
 @bot.message_handler(commands=['start'])
 def handler_message(message):
-
     markup = types.InlineKeyboardMarkup(row_width=3)
     item1 = types.InlineKeyboardButton("add", callback_data='add')
     item2 = types.InlineKeyboardButton("reset", callback_data='reset')
@@ -44,21 +52,16 @@ def reset_(message):
     markup = types.InlineKeyboardMarkup(row_width=1)
     item1 = types.InlineKeyboardButton("add", callback_data='add')
     markup.add(item1)
-
     db_script.reset(message.chat.id)
     bot.send_message(message.chat.id, text='База чиста', parse_mode='html', reply_markup=markup)
 
-
-@bot.callback_query_handler(func=lambda message: message.data == 'reset') # срабатывает на кнопку
+@bot.callback_query_handler(func=lambda message: message.data == 'reset')  # срабатывает на кнопку
 def handler_message(message):
     reset_(message.message)
 
-
-@bot.message_handler(commands=['reset']) # срабатывает на команду
+@bot.message_handler(commands=['reset'])  # срабатывает на команду
 def handler_message(message):
     reset_(message)
-
-
 
 def lits_(message):
     data = db_script.list(message.chat.id)
@@ -67,17 +70,20 @@ def lits_(message):
         for i in data:
             counter += 1
             bot.send_message(message.chat.id, text=f'---------- location {counter} ------------ ')
-            bot.send_photo(message.chat.id, open(i[3], 'rb'), caption=f'Название ресторана: {i[2]}')
+            try:
+                bot.send_photo(message.chat.id, open(i[3], 'rb'), caption=f'Название ресторана: {i[2]}')
+            except FileNotFoundError as e:
+                bot.send_message(message.chat.id, text=f'фото не найдено!')
+
             bot.send_location(message.chat.id, i[5], i[4])  # latitude(широта), longitude(долгота)
     else:
         bot.send_message(message.chat.id, text='База пуста')
 
-
-@bot.callback_query_handler(func=lambda message: message.data == 'list')   # срабатывает на кнопку
+@bot.callback_query_handler(func=lambda message: message.data == 'list')  # срабатывает на кнопку
 def handler_message(message):
     lits_(message.message)
 
-@bot.message_handler(commands=['list']) # срабатывает на команду
+@bot.message_handler(commands=['list'])  # срабатывает на команду
 def handler_message(message):
     lits_(message)
 
@@ -86,11 +92,10 @@ def handler_message(message):
     bot.send_message(message.message.chat.id, text='Напиши название ресторана')
     update_state(message.message, name)
 
-@bot.message_handler(commands=['add']) # срабатывает на команду
+@bot.message_handler(commands=['add'])  # срабатывает на команду
 def handler_message(message):
     bot.send_message(message.chat.id, text='Напиши название ресторана')
     update_state(message, name)
-
 
 @bot.message_handler(func=lambda message: get_state(message) == name)
 def handler_message(message):
@@ -98,8 +103,7 @@ def handler_message(message):
     bot.send_message(message.chat.id, text='Добавь фотографию ресторана')
     update_state(message, picture)
 
-
-@bot.message_handler(content_types=['photo'], func=lambda  message: get_state(message) == picture)
+@bot.message_handler(content_types=['photo'], func=lambda message: get_state(message) == picture)
 def handler_message(message):
     if message.photo:
         try:
@@ -123,7 +127,7 @@ def handler_message(message):
         bot.send_message(message.chat.id, text=f'Вы прислали не фото: {message.text}.\n Попробуйте еще раз')
         update_state(message, picture)
 
-@bot.message_handler(func=lambda  message: get_state(message) == res_location, content_types= 'location')
+@bot.message_handler(func=lambda message: get_state(message) == res_location, content_types='location')
 def handler_message(message):
     if message.location:
 
@@ -140,7 +144,7 @@ def handler_message(message):
         markup.add(item1, item2)
 
         bot.send_message(message.chat.id, \
-        text=f'Напиши Да, если все правильно: \nНазвание: {restaran["name"]} \nГеопозиция: {restaran["res_location"]}',
+                         text=f'Напиши Да, если все правильно: \nНазвание: {restaran["name"]} \nГеопозиция: {restaran["res_location"]}',
                          parse_mode='html', reply_markup=markup)
 
     else:
@@ -168,14 +172,5 @@ def handler_message(message):
         bot.send_message(message.message.chat.id, text='Попробуем еще раз)', parse_mode='html', reply_markup=markup)
         update_state(message.message, add)
 
-
-
-
-if __name__ == "__main__":
-    try:
-        bot.polling()
-    except:
-        time.sleep(20)
-        bot.polling()
-
+bot.polling(none_stop=True, timeout=123)
 
